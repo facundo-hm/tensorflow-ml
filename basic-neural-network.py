@@ -1,8 +1,6 @@
-from __future__ import absolute_import, division, print_function
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
-import matplotlib.pyplot as plt
 
 max_value = 255.0
 
@@ -28,7 +26,7 @@ label_names = [
 train_images = train_images / max_value
 test_images = test_images / max_value
 
-# Define layers
+# Define model layers
 model = keras.Sequential([
     keras.layers.Flatten(input_shape=(28, 28)),
     keras.layers.Dense(128, activation=tf.nn.relu),

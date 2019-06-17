@@ -1,4 +1,3 @@
-from __future__ import absolute_import, division, print_function
 import tensorflow as tf
 from tensorflow import keras
 import numpy as np
@@ -55,7 +54,7 @@ partial_train_labels = train_labels[10000:]
 model.fit(
     partial_train_data,
     partial_train_labels,
-    epochs=40,
+    epochs=20,
     batch_size=512,
     validation_data=(validation_train_data, validation_train_labels),
     verbose=1
