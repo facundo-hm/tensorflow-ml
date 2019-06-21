@@ -34,14 +34,14 @@ model = keras.Sequential([
     keras.layers.Dense(1, activation=tf.nn.sigmoid)
 ])
 
-model.summary()
-
 # Configure model
 model.compile(
     optimizer='adam',
     loss='binary_crossentropy',
     metrics=['acc']
 )
+
+model.summary()
 
 # Create a validation set
 validation_train_data = train_data[:10000]
