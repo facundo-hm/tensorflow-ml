@@ -8,13 +8,17 @@ sequence_maxlen = 256
 
 # Load data
 imdb = keras.datasets.imdb
-(train_data, train_labels), (test_data, test_labels) = imdb.load_data(num_words=word_count)
+(train_data, train_labels), (test_data, test_labels) = imdb.load_data(
+    num_words=word_count
+)
+
 
 def convert_to_hot_encoding(sequences, dimension):
     hot_encoded_sequences = np.zeros((len(sequences), dimension))
     for i, word_indices in enumerate(sequences):
         hot_encoded_sequences[i, word_indices] = 1.0
     return hot_encoded_sequences
+
 
 # Hot enconde data
 train_data = convert_to_hot_encoding(train_data, dimension=word_count)
@@ -35,7 +39,11 @@ regularized_model = keras.Sequential([
         activation=tf.nn.relu,
         input_shape=(word_count,)
     ),
-    keras.layers.Dense(16, kernel_regularizer=keras.regularizers.l2(0.001), activation=tf.nn.relu),
+    keras.layers.Dense(
+        16,
+        kernel_regularizer=keras.regularizers.l2(0.001),
+        activation=tf.nn.relu
+    ),
     keras.layers.Dense(1, activation=tf.nn.sigmoid)
 ])
 
@@ -89,5 +97,3 @@ droppedout_model.fit(
 # Evaluate models
 regularized_model.evaluate(test_data, test_labels)
 droppedout_model.evaluate(test_data, test_labels)
-
-

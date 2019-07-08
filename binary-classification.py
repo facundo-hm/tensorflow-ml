@@ -1,6 +1,5 @@
 import tensorflow as tf
 from tensorflow import keras
-import numpy as np
 
 word_count = 10000
 pad_value = 0
@@ -8,7 +7,9 @@ sequence_maxlen = 256
 
 # Load data
 imdb = keras.datasets.imdb
-(train_data, train_labels), (test_data, test_labels) = imdb.load_data(num_words=word_count)
+(train_data, train_labels), (test_data, test_labels) = imdb.load_data(
+    num_words=word_count
+)
 
 # Standardize train_data length
 train_data = keras.preprocessing.sequence.pad_sequences(

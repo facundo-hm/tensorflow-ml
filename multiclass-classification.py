@@ -6,7 +6,9 @@ max_value = 255.0
 
 # Load data
 fashion_mnist = keras.datasets.fashion_mnist
-(train_images, train_labels), (test_images, test_labels) = fashion_mnist.load_data()
+(train_images, train_labels), (test_images, test_labels) = (
+    fashion_mnist.load_data()
+)
 
 # Define possible labels
 label_names = [
@@ -35,7 +37,7 @@ model = keras.Sequential([
 
 # Set compilation settings
 model.compile(
-    optimizer='adam', 
+    optimizer='adam',
     loss='sparse_categorical_crossentropy',
     metrics=['accuracy']
 )
