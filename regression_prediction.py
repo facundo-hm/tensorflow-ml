@@ -29,16 +29,15 @@ dataset = pd.read_csv(
 dataset = dataset.dropna()
 
 # Apply one-hot encoding
-origin_column = dataset.pop('Origin')
-
-dataset['USA'] = (origin_column == 1)*1.0
-dataset['Europe'] = (origin_column == 2)*1.0
-dataset['Japan'] = (origin_column == 3)*1.0
+dataset = dataset.assign(
+    USA=lambda row: (row['Origin'] == 1) * 1.0,
+    Europe=lambda row: (row['Origin'] == 2) * 1.0,
+    Japan=lambda row: (row['Origin'] == 3) * 1.0
+).drop(['Origin'], axis=1)
 
 # Split data
 train_dataset = dataset.sample(frac=0.8, random_state=0)
 test_dataset = dataset.drop(train_dataset.index)
-print(test_dataset.index)
 
 # Separate label from features
 train_labels = train_dataset.pop('MPG')
@@ -56,18 +55,18 @@ normed_test_data = (test_dataset - train_stats['mean']) / train_stats['std']
 model = keras.Sequential([
     keras.layers.Dense(
         64,
-        activation=tf.nn.relu,
+        activation='relu',
         input_shape=[len(train_dataset.keys())]
     ),
-    keras.layers.Dense(64, activation=tf.nn.relu),
+    keras.layers.Dense(64, activation='relu'),
     keras.layers.Dense(1)
 ])
 
 # Configure model
 model.compile(
-    loss='mean_squared_error',
+    loss='mse',
     optimizer=tf.keras.optimizers.RMSprop(0.001),
-    metrics=['mean_absolute_error', 'mean_squared_error']
+    metrics=['mae', 'mse']
 )
 
 model.summary()
