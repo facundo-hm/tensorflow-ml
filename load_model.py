@@ -1,15 +1,14 @@
 from tensorflow import keras
 
-max_value = 255.0
-max_images = 1000
+MAX_VALUE = 255.0
+MAX_IMAGES = 1000
 
-# Load data
 (train_images, train_labels), (test_images, test_labels) = (
     keras.datasets.fashion_mnist.load_data()
 )
 
-test_labels = test_labels[:max_images]
-test_images = test_images[:max_images] / max_value
+test_labels = test_labels[:MAX_IMAGES]
+test_images = test_images[:MAX_IMAGES] / MAX_VALUE
 
 # Define model layers
 model = keras.Sequential([
@@ -27,12 +26,8 @@ model.compile(
 
 # Load model weights
 model.load_weights('models/mc_model_checkpoint.ckpt')
-
-# Evaluate model
 model.evaluate(test_images, test_labels)
 
 # Load entire model
 model_two = keras.models.load_model('models/mc_model.h5')
-
-# Evaluate model
 model_two.evaluate(test_images, test_labels)
