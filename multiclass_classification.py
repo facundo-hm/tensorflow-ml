@@ -1,14 +1,13 @@
-from tensorflow import keras
+from tensorflow.python import keras
+from tensorflow.python.keras.layers import Flatten, Dense
+from keras.datasets import fashion_mnist
 import numpy as np
 
-max_value = 255.0
+MAX_VALUE = 255.0
 
-# Load data
 (train_images, train_labels), (test_images, test_labels) = (
-    keras.datasets.fashion_mnist.load_data()
+    fashion_mnist.load_data()
 )
-
-# Define possible labels
 label_names = [
     'T-shirt/top',
     'Trouser',
@@ -23,35 +22,29 @@ label_names = [
 ]
 
 # Scale image values to a range of 0 to 1
-train_images = train_images / max_value
-test_images = test_images / max_value
+train_images = train_images / MAX_VALUE
+test_images = test_images / MAX_VALUE
 
-# Define model layers
 model = keras.Sequential([
-    keras.layers.Flatten(input_shape=(28, 28)),
-    keras.layers.Dense(128, activation='relu'),
-    keras.layers.Dense(10, activation='softmax')
+    Flatten(input_shape=(28, 28)),
+    Dense(128, activation='relu'),
+    Dense(10, activation='softmax')
 ])
 
-# Set compilation settings
 model.compile(
     optimizer='adam',
     loss='sparse_categorical_crossentropy',
     metrics=['accuracy']
 )
 
-# Train the model
 model.fit(train_images, train_labels, epochs=5)
 
-# Predict images
 test_predictions = model.predict(test_images)
 
 print(test_predictions[0])
 print(np.argmax(test_predictions[0]))
 
-# Predict one image
 image_prediction = np.expand_dims(test_images[0], axis=0)
-
 single_prediction = model.predict(image_prediction)
 
 print(single_prediction)
