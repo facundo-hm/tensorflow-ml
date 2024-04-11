@@ -1,43 +1,43 @@
-import tensorflow as tf
-from tensorflow import keras
+from typing import cast
+from tensorflow import string, data
+from tensorflow.python.keras import Sequential
+from tensorflow.python.keras.layers import Dense
 import tensorflow_hub as hub
 import tensorflow_datasets as tfds
 
 BATCH_SIZE = 512
-URL = 'https://tfhub.dev/google/tf2-preview/gnews-swivel-20dim/1'
+EMBEDDING = 'https://tfhub.dev/google/nnlm-en-dim50/2'
 
-train_subsplit = tfds.Split.TRAIN.subsplit([6, 4])
-(train_data, validation_data), test_data = tfds.load(
-    name='imdb_reviews',
-    split=(train_subsplit, tfds.Split.TEST),
-    as_supervised=True
-)
+train_data, validation_data, test_data = tfds.load(
+    name ='imdb_reviews', 
+    split=('train[:60%]', 'train[60%:]', 'test'),
+    as_supervised=True)
+
+train_data = cast(data.Dataset, train_data)
+validation_data = cast(data.Dataset, validation_data)
+test_data = cast(data.Dataset, test_data)
 
 hub_layer = hub.KerasLayer(
-    URL,
+    EMBEDDING,
     input_shape=[],
-    dtype=tf.string,
-    trainable=True
-)
-model = keras.Sequential([
+    dtype=string,
+    trainable=True)
+model = Sequential([
     hub_layer,
-    keras.layers.Dense(16, activation='relu'),
-    keras.layers.Dense(1, activation='sigmoid')
-])
+    Dense(16, activation='relu'),
+    Dense(1, activation='sigmoid')])
 
 model.summary()
 
 model.compile(
     optimizer='adam',
     loss='binary_crossentropy',
-    metrics=['accuracy']
-)
+    metrics=['accuracy'])
 
 model.fit(
     train_data.shuffle(10000).batch(BATCH_SIZE),
     epochs=10,
     validation_data=validation_data.batch(BATCH_SIZE),
-    verbose=1
-)
+    verbose=1)
 
 model.evaluate(test_data.batch(BATCH_SIZE), verbose=1)
