@@ -1,14 +1,12 @@
-from tensorflow.python import keras
+from typing import cast
+from tensorflow import data
+from tensorflow.python.keras import Sequential
 from tensorflow.python.keras.layers import Flatten, Dense
-from keras.datasets import fashion_mnist
+import tensorflow_datasets as tfds
 import numpy as np
 
 MAX_VALUE = 255.0
-
-(train_images, train_labels), (test_images, test_labels) = (
-    fashion_mnist.load_data()
-)
-label_names = [
+LABEL_NAMES = [
     'T-shirt/top',
     'Trouser',
     'Pullover',
@@ -21,11 +19,23 @@ label_names = [
     'Ankle boot'
 ]
 
+(train_images, train_labels), (test_images, test_labels) = (
+    tfds.load(
+        'mnist',
+        split=['train', 'test'],
+        as_supervised=True)
+)
+
+train_images = cast(data.Dataset, train_images)
+train_labels = cast(data.Dataset, train_labels)
+test_images = cast(data.Dataset, test_images)
+test_labels = cast(data.Dataset, test_labels)
+
 # Scale image values to a range of 0 to 1
 train_images = train_images / MAX_VALUE
 test_images = test_images / MAX_VALUE
 
-model = keras.Sequential([
+model = Sequential([
     Flatten(input_shape=(28, 28)),
     Dense(128, activation='relu'),
     Dense(10, activation='softmax')
