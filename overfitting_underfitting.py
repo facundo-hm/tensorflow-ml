@@ -1,43 +1,48 @@
-from tensorflow import keras
+from typing import cast
+from tensorflow import data
+from tensorflow.python.keras import Sequential, regularizers
+from tensorflow.python.keras.layers import Dense, Dropout
+import tensorflow_datasets as tfds
 import numpy as np
 
-word_count = 10000
-pad_value = 0
-sequence_maxlen = 256
+WORD_COUNT = 10000
+PAD_VALUE = 0
+SEQUENCE_MAXLEN = 256
 
-# Load data
-imdb = keras.datasets.imdb
-(train_data, train_labels), (test_data, test_labels) = imdb.load_data(
-    num_words=word_count
+(train_data, train_labels), (test_data, test_labels) = (
+    tfds.load(
+        'imdb_reviews',
+        split=['train', 'test'],
+        as_supervised=True)
 )
 
+train_data = cast(data.Dataset, train_data)
+train_labels = cast(data.Dataset, train_labels)
+test_data = cast(data.Dataset, test_data)
+test_labels = cast(data.Dataset, test_labels)
 
 def convert_to_hot_encoding(sequences, dimension):
     hot_encoded_sequences = np.zeros((len(sequences), dimension))
+
     for i, word_indices in enumerate(sequences):
         hot_encoded_sequences[i, word_indices] = 1.0
+
     return hot_encoded_sequences
 
+train_data = convert_to_hot_encoding(train_data, dimension=WORD_COUNT)
+test_data = convert_to_hot_encoding(test_data, dimension=WORD_COUNT)
 
-# Hot enconde data
-train_data = convert_to_hot_encoding(train_data, dimension=word_count)
-test_data = convert_to_hot_encoding(test_data, dimension=word_count)
-
-# Create a validation set
 validation_train_data = train_data[:10000]
 partial_train_data = train_data[10000:]
-
 validation_train_labels = train_labels[:10000]
 partial_train_labels = train_labels[10000:]
 
-# Define model
-overfitted_model = keras.Sequential([
-    keras.layers.Dense(512, activation='relu', input_shape=(word_count,)),
-    keras.layers.Dense(512, activation='relu'),
-    keras.layers.Dense(1, activation='sigmoid')
+overfitted_model = Sequential([
+    Dense(512, activation='relu', input_shape=(WORD_COUNT,)),
+    Dense(512, activation='relu'),
+    Dense(1, activation='sigmoid')
 ])
 
-# Configure model
 overfitted_model.compile(
     optimizer='adam',
     loss='binary_crossentropy',
@@ -46,7 +51,6 @@ overfitted_model.compile(
 
 overfitted_model.summary()
 
-# Train and monitor model
 overfitted_model.fit(
     train_data,
     train_labels,
@@ -56,23 +60,21 @@ overfitted_model.fit(
     verbose=2
 )
 
-# Define model layers with weight regularizer
-regularized_model = keras.Sequential([
-    keras.layers.Dense(
+regularized_model = Sequential([
+    Dense(
         16,
-        kernel_regularizer=keras.regularizers.l2(0.001),
+        kernel_regularizer=regularizers.l2(0.001),
         activation='relu',
-        input_shape=(word_count,)
+        input_shape=(WORD_COUNT,)
     ),
-    keras.layers.Dense(
+    Dense(
         16,
-        kernel_regularizer=keras.regularizers.l2(0.001),
+        kernel_regularizer=regularizers.l2(0.001),
         activation='relu'
     ),
-    keras.layers.Dense(1, activation='sigmoid')
+    Dense(1, activation='sigmoid')
 ])
 
-# Configure model
 regularized_model.compile(
     optimizer='adam',
     loss='binary_crossentropy',
@@ -81,7 +83,6 @@ regularized_model.compile(
 
 regularized_model.summary()
 
-# Train and monitor model
 regularized_model.fit(
     partial_train_data,
     partial_train_labels,
@@ -91,16 +92,14 @@ regularized_model.fit(
     verbose=2
 )
 
-# Define model layers with dropout regularizer
-droppedout_model = keras.models.Sequential([
-    keras.layers.Dense(16, activation='relu', input_shape=(word_count,)),
-    keras.layers.Dropout(0.5),
-    keras.layers.Dense(16, activation='relu'),
-    keras.layers.Dropout(0.5),
-    keras.layers.Dense(1, activation='sigmoid')
+droppedout_model = Sequential([
+    Dense(16, activation='relu', input_shape=(WORD_COUNT,)),
+    Dropout(0.5),
+    Dense(16, activation='relu'),
+    Dropout(0.5),
+    Dense(1, activation='sigmoid')
 ])
 
-# Configure model
 droppedout_model.compile(
     optimizer='adam',
     loss='binary_crossentropy',
@@ -109,7 +108,6 @@ droppedout_model.compile(
 
 droppedout_model.summary()
 
-# Train and monitor model
 droppedout_model.fit(
     partial_train_data,
     partial_train_labels,
@@ -119,6 +117,5 @@ droppedout_model.fit(
     verbose=2
 )
 
-# Evaluate models
 regularized_model.evaluate(test_data, test_labels)
 droppedout_model.evaluate(test_data, test_labels)
