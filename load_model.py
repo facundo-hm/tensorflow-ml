@@ -1,33 +1,38 @@
-from tensorflow import keras
+from typing import cast
+from tensorflow import data
+from tensorflow.python.keras import Sequential, layers, models
+import tensorflow_datasets as tfds
 
 MAX_VALUE = 255.0
 MAX_IMAGES = 1000
 
 (train_images, train_labels), (test_images, test_labels) = (
-    keras.datasets.fashion_mnist.load_data()
+    tfds.load(
+        'mnist',
+        split=['train', 'test'],
+        as_supervised=True)
 )
+
+test_images = cast(data.Dataset, test_images)
+test_labels = cast(data.Dataset, test_labels)
 
 test_labels = test_labels[:MAX_IMAGES]
 test_images = test_images[:MAX_IMAGES] / MAX_VALUE
 
-# Define model layers
-model = keras.Sequential([
-    keras.layers.Flatten(input_shape=(28, 28)),
-    keras.layers.Dense(128, activation='relu'),
-    keras.layers.Dense(10, activation='softmax')
+model = Sequential([
+    layers.Flatten(input_shape=(28, 28)),
+    layers.Dense(128, activation='relu'),
+    layers.Dense(10, activation='softmax')
 ])
 
-# Set compilation settings
 model.compile(
     optimizer='adam',
     loss='sparse_categorical_crossentropy',
     metrics=['accuracy']
 )
 
-# Load model weights
 model.load_weights('models/mc_model_checkpoint.ckpt')
 model.evaluate(test_images, test_labels)
 
-# Load entire model
-model_two = keras.models.load_model('models/mc_model.h5')
+model_two = models.load_model('models/mc_model.h5')
 model_two.evaluate(test_images, test_labels)
