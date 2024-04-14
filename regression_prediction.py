@@ -1,9 +1,9 @@
-import tensorflow as tf
-from tensorflow import keras
+from tensorflow.python.keras.utils import data_utils
+from tensorflow.python.keras import Sequential, callbacks, optimizers
+from tensorflow.python.keras.layers import Dense
 import pandas as pd
 
-# Download file
-dataset_file = keras.utils.get_file(
+dataset_file = data_utils.get_file(
     "auto-mpg.data",
     (
         "https://archive.ics.uci.edu/ml/"
@@ -11,11 +11,9 @@ dataset_file = keras.utils.get_file(
     )
 )
 
-# Define column names
 column_names = ['MPG', 'Cylinders', 'Displacement', 'Horsepower',
                 'Weight', 'Acceleration', 'Model Year', 'Origin']
 
-# Load dataset
 dataset = pd.read_csv(
     dataset_file,
     names=column_names,
@@ -50,22 +48,19 @@ train_stats = train_dataset.describe().transpose()
 normed_train_data = (train_dataset - train_stats['mean']) / train_stats['std']
 normed_test_data = (test_dataset - train_stats['mean']) / train_stats['std']
 
-
-# Define model layers
-model = keras.Sequential([
-    keras.layers.Dense(
+model = Sequential([
+    Dense(
         64,
         activation='relu',
         input_shape=[len(train_dataset.keys())]
     ),
-    keras.layers.Dense(64, activation='relu'),
-    keras.layers.Dense(1)
+    Dense(64, activation='relu'),
+    Dense(1)
 ])
 
-# Configure model
 model.compile(
     loss='mse',
-    optimizer=tf.keras.optimizers.RMSprop(0.001),
+    optimizer=optimizers.RMSprop(0.001),
     metrics=['mae', 'mse']
 )
 
@@ -77,7 +72,7 @@ model.fit(
   epochs=1000,
   validation_split=0.2,
   verbose=1,
-  callbacks=[keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)]
+  callbacks=[callbacks.EarlyStopping(monitor='val_loss', patience=10)]
 )
 
 model.evaluate(
