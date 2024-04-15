@@ -1,41 +1,45 @@
-from tensorflow import keras
+from typing import cast
+from tensorflow import data
+from tensorflow.python.keras import Sequential, callbacks
+from tensorflow.python.keras.layers import Dense, Flatten
+import tensorflow_datasets as tfds
 
-max_value = 255.0
-max_images = 1000
+MAX_VALUE = 255.0
 
-# Load data
 (train_images, train_labels), (test_images, test_labels) = (
-    keras.datasets.fashion_mnist.load_data()
+    tfds.load(
+        'mnist',
+        split=['train', 'test'],
+        as_supervised=True)
 )
 
-train_labels = train_labels[:max_images]
-test_labels = test_labels[:max_images]
+train_images = cast(data.Dataset, train_images)
+train_labels = cast(data.Dataset, train_labels)
+test_images = cast(data.Dataset, test_images)
+test_labels = cast(data.Dataset, test_labels)
 
-train_images = train_images[:max_images] / max_value
-test_images = test_images[:max_images] / max_value
+# Scale image values to a range of 0 to 1
+train_images = train_images / MAX_VALUE
+test_images = test_images / MAX_VALUE
 
-# Define model layers
-model = keras.Sequential([
-    keras.layers.Flatten(input_shape=(28, 28)),
-    keras.layers.Dense(128, activation='relu'),
-    keras.layers.Dense(10, activation='softmax')
+model = Sequential([
+    Flatten(input_shape=(28, 28)),
+    Dense(128, activation='relu'),
+    Dense(10, activation='softmax')
 ])
 
-# Set compilation settings
 model.compile(
     optimizer='adam',
     loss='sparse_categorical_crossentropy',
     metrics=['accuracy']
 )
 
-# Create callback
-cp_callback = keras.callbacks.ModelCheckpoint(
+cp_callback = callbacks.ModelCheckpoint(
     filepath='models/mc_model_checkpoint.ckpt',
     save_weights_only=True,
     verbose=1
 )
 
-# Train model and save weights
 model.fit(
     train_images,
     train_labels,
@@ -44,5 +48,4 @@ model.fit(
     callbacks=[cp_callback]
 )
 
-# Save entire model
 model.save('models/mc_model.h5')
