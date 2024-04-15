@@ -1,3 +1,4 @@
+from typing import Callable
 from tensorflow.python.keras.utils import data_utils
 from tensorflow.python.keras import Sequential, callbacks, optimizers
 from tensorflow.python.keras.layers import Dense
@@ -26,11 +27,14 @@ dataset = pd.read_csv(
 # Drop rows with unknown values
 dataset = dataset.dropna()
 
+def create_encoding_func(value: int) -> Callable[[pd.Series], float]:
+    return lambda row: (row['Origin'] == value) * 1.0
+
 # Apply one-hot encoding
 dataset = dataset.assign(
-    USA=lambda row: (row['Origin'] == 1) * 1.0,
-    Europe=lambda row: (row['Origin'] == 2) * 1.0,
-    Japan=lambda row: (row['Origin'] == 3) * 1.0
+    USA=create_encoding_func(1),
+    Europe=create_encoding_func(2),
+    Japan=create_encoding_func(3)
 ).drop(['Origin'], axis=1)
 
 # Split data
@@ -41,12 +45,13 @@ test_dataset = dataset.drop(train_dataset.index)
 train_labels = train_dataset.pop('MPG')
 test_labels = test_dataset.pop('MPG')
 
-# Get data statistics
 train_stats = train_dataset.describe().transpose()
 
-# Normalize data
-normed_train_data = (train_dataset - train_stats['mean']) / train_stats['std']
-normed_test_data = (test_dataset - train_stats['mean']) / train_stats['std']
+def normalize_data(dataset: pd.DataFrame):
+    return (dataset - train_stats['mean']) / train_stats['std']
+
+normed_train_data = normalize_data(train_dataset)
+normed_test_data = normalize_data(test_dataset)
 
 model = Sequential([
     Dense(
