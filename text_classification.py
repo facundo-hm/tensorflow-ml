@@ -1,9 +1,19 @@
 from typing import cast
 import re
 import string
-from tensorflow import data, strings
-from keras.layers import TextVectorization
+import tensorflow as tf
+from tensorflow import data, strings, constant
+import keras
 import tensorflow_datasets as tfds
+
+# Fix autocomplete issue
+tf_keras = cast(keras, tf.keras)
+Sequential, losses, metrics, activations = (
+    tf_keras.Sequential,
+    tf_keras.losses,
+    tf_keras.metrics,
+    tf_keras.activations)
+layers = tf_keras.layers
 
 Load_Response = tuple[data.Dataset, data.Dataset, data.Dataset]
 
@@ -26,11 +36,12 @@ def standardize_data(input_data):
 
     return input_data
 
-
 MAX_FEATURES = 10000
 SEQUENCE_LENGTH = 250
+EMBEDDING_DIM = 16
+EPOCHS = 10
 
-vectorize_layer = TextVectorization(
+vectorize_layer = layers.TextVectorization(
     standardize=standardize_data,
     max_tokens=MAX_FEATURES,
     output_mode='int',
@@ -40,3 +51,35 @@ vectorize_layer = TextVectorization(
 train_text = train_data.map(lambda x, y: x)
 # Fit the state of the preprocessing layer to the dataset
 vectorize_layer.adapt(train_text)
+
+model = Sequential([
+    vectorize_layer,
+    layers.Embedding(MAX_FEATURES, EMBEDDING_DIM),
+    layers.Dropout(0.2),
+    layers.GlobalAveragePooling1D(),
+    layers.Dropout(0.2),
+    layers.Dense(1, activation=activations.sigmoid)])
+
+model.summary()
+
+model.compile(
+    loss=losses.BinaryCrossentropy(),
+    optimizer='adam',
+    metrics=[metrics.BinaryAccuracy(threshold=0.5)])
+
+model.fit(
+    train_data,
+    validation_data=validation_data,
+    epochs=EPOCHS)
+
+model.evaluate(test_data)
+
+new_reviews = constant([
+  'The movie was great!',
+  'The movie was okay.',
+  'The movie was terrible...'
+])
+
+prediction = model.predict(new_reviews)
+
+print('Prediction: ', prediction)
