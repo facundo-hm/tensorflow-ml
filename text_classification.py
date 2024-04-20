@@ -8,11 +8,12 @@ import tensorflow_datasets as tfds
 
 # Fix autocomplete issue
 tf_keras = cast(keras, tf.keras)
-Sequential, losses, metrics, activations = (
+Sequential, losses, metrics, activations, optimizers = (
     tf_keras.Sequential,
     tf_keras.losses,
     tf_keras.metrics,
-    tf_keras.activations)
+    tf_keras.activations,
+    tf_keras.optimizers)
 layers = tf_keras.layers
 
 Load_Response = tuple[data.Dataset, data.Dataset, data.Dataset]
@@ -64,7 +65,7 @@ model.summary()
 
 model.compile(
     loss=losses.BinaryCrossentropy(),
-    optimizer='adam',
+    optimizer=optimizers.Adam(),
     metrics=[metrics.BinaryAccuracy(threshold=0.5)])
 
 model.fit(
