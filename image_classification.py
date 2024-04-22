@@ -1,76 +1,85 @@
 from typing import cast
-from tensorflow import data
-from tensorflow.python.keras import Sequential, losses
-from tensorflow.python.keras.layers import Flatten, Dense, Softmax
+import tensorflow as tf 
+import keras
 import tensorflow_datasets as tfds
 import numpy as np
 
+tf_keras = cast(keras, tf.keras)
+(Sequential, layers, losses, metrics, activations, optimizers) = (
+    tf_keras.Sequential, tf_keras.layers, tf_keras.losses,
+    tf_keras.metrics, tf_keras.activations, tf_keras.optimizers)
+
 MAX_VALUE = 255.0
 LABEL_NAMES = [
-    'T-shirt/top',
-    'Trouser',
-    'Pullover',
-    'Dress',
-    'Coat',
-    'Sandal',
-    'Shirt',
-    'Sneaker',
-    'Bag',
-    'Ankle boot'
-]
+    'T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal',
+    'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
 
-Load_Response = tuple[data.Dataset, data.Dataset]
+Load_Response = tuple[
+    tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]
 
-(X, y), (X_test, y_test) = cast(
-    tuple[Load_Response, Load_Response],
-    tfds.load(
-        'mnist',
-        split=['train', 'test'],
+train_data, validation_data, test_data = cast(
+  Load_Response,
+  tfds.load(
+        'fashion_mnist',
+        split=('train[:80%]', 'train[80%:]', 'test'),
+        batch_size=128,
         as_supervised=True))
 
-# Scale image values to a range of 0 to 1
-X: data.Dataset = X / MAX_VALUE
-X_test: data.Dataset = X_test / MAX_VALUE
+def normalize_img(image, label):
+    # x and y must have the same dtype.
+    # Normalize images from uint8 to float32
+    return tf.cast(image, tf.float32) / MAX_VALUE, label
+
+train_data = train_data.map(
+    normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
+validation_data = validation_data.map(
+    normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
+test_data = test_data.map(
+    normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
 
 model = Sequential([
-    Flatten(input_shape=(28, 28)),
-    Dense(128, activation='relu'),
-    Dense(10)
-])
+    layers.Flatten(input_shape=(28, 28)),
+    layers.Dense(128, activation='relu'),
+    layers.Dense(10)])
+
+model.summary()
 
 model.compile(
-    optimizer='adam',
+    optimizer=optimizers.Adam(0.001),
     loss=losses.SparseCategoricalCrossentropy(from_logits=True),
-    metrics=['accuracy']
-)
+    metrics=[metrics.SparseCategoricalAccuracy()])
 
-model.fit(X, y, epochs=10)
+model.fit(train_data, validation_data=validation_data, epochs=10)
 
-model.evaluate(X_test, y_test, verbose=2)
+model.evaluate(test_data, verbose=2)
 
 # Attach a softmax layer to convert the model's
 # linear outputs—logits—to probabilities
 probability_model = Sequential([
     model, 
-    Softmax()
+    layers.Softmax()
 ])
+
+# Remove labels
+X_test = test_data.map(lambda x, y: x)
 
 # Predict the label for each image in the testing set
 predictions = probability_model.predict(X_test)
 
+X_batch_images, y_batch_lables = tuple(test_data.take(1))[0]
+
 # A prediction is an array of 10 numbers that represent the
 # probability that the image corresponds to each class
 print('Prediction: ', np.argmax(predictions[0]))
-print('Label: ', y_test[0])
+print('Label: ', y_batch_lables[0])
 
 # Use the trained model to make a single prediction
-img = X_test[1]
+img = X_batch_images[1]
 
-# tf.keras models are optimized to make predictions
-# on a batch, or collection.
-# Add the image to a batch where it's the only member.
+# tf.keras models are optimized to make predictions on a batch,
+# or collection. Add the image to a batch where it's the only member.
 img = np.expand_dims(img, 0)
 img_prediction = probability_model.predict(img)
 
 print('Prediction: ', np.argmax(img_prediction[0]))
-print('Label: ', y_test[1])
+print('Label: ', y_batch_lables[1])
