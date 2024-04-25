@@ -1,20 +1,11 @@
 from typing import cast
 import re
 import string
-import tensorflow as tf
 from tensorflow import data, strings, constant
-import keras
 import tensorflow_datasets as tfds
-
-# Fix autocomplete issue
-tf_keras = cast(keras, tf.keras)
-Sequential, losses, metrics, activations, optimizers = (
-    tf_keras.Sequential,
-    tf_keras.losses,
-    tf_keras.metrics,
-    tf_keras.activations,
-    tf_keras.optimizers)
-layers = tf_keras.layers
+from utils import (
+    Sequential, layers, losses, optimizers,
+    metrics, activations)
 
 Load_Response = tuple[data.Dataset, data.Dataset, data.Dataset]
 

@@ -1,13 +1,9 @@
 from typing import cast
-import tensorflow as tf 
-import keras
+import tensorflow as tf
 import tensorflow_datasets as tfds
 import numpy as np
-
-tf_keras = cast(keras, tf.keras)
-(Sequential, layers, losses, metrics, activations, optimizers) = (
-    tf_keras.Sequential, tf_keras.layers, tf_keras.losses,
-    tf_keras.metrics, tf_keras.activations, tf_keras.optimizers)
+from utils import (
+    Sequential, layers, losses, optimizers, metrics)
 
 MAX_VALUE = 255.0
 LABEL_NAMES = [

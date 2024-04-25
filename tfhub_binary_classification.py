@@ -1,14 +1,8 @@
 from typing import cast
-import tensorflow as tf
 from tensorflow import string, data
-import keras
 import tensorflow_hub as hub
 import tensorflow_datasets as tfds
-
-tf_keras = cast(keras, tf.keras)
-(Sequential, layers, losses, metrics, activations, optimizers) = (
-    tf_keras.Sequential, tf_keras.layers, tf_keras.losses,
-    tf_keras.metrics, tf_keras.activations, tf_keras.optimizers)
+from utils import Sequential, layers
 
 BATCH_SIZE = 512
 EMBEDDING = 'https://tfhub.dev/google/nnlm-en-dim50/2'

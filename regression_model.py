@@ -1,17 +1,6 @@
-from typing import cast
-import tensorflow as tf
-import keras
 import pandas as pd
 import numpy as np
-
-tf_keras = cast(keras, tf.keras)
-Sequential, losses, metrics, activations, optimizers = (
-    tf_keras.Sequential,
-    tf_keras.losses,
-    tf_keras.metrics,
-    tf_keras.activations,
-    tf_keras.optimizers)
-layers = tf_keras.layers
+from utils import Sequential, layers, optimizers
 
 URL = (
     'http://archive.ics.uci.edu/ml/machine-learning-databases/'
