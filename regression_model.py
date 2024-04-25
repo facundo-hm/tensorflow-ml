@@ -1,0 +1,72 @@
+from typing import cast
+import tensorflow as tf
+import keras
+import pandas as pd
+import numpy as np
+
+tf_keras = cast(keras, tf.keras)
+Sequential, losses, metrics, activations, optimizers = (
+    tf_keras.Sequential,
+    tf_keras.losses,
+    tf_keras.metrics,
+    tf_keras.activations,
+    tf_keras.optimizers)
+layers = tf_keras.layers
+
+URL = (
+    'http://archive.ics.uci.edu/ml/machine-learning-databases/'
+    'auto-mpg/auto-mpg.data')
+COLUMN_NAMES = [
+    'MPG', 'Cylinders', 'Displacement', 'Horsepower',
+    'Weight', 'Acceleration', 'Model Year', 'Origin']
+
+dataset = pd.read_csv(
+    URL,
+    names=COLUMN_NAMES,
+    na_values='?',
+    comment='\t',
+    sep=' ',
+    skipinitialspace=True)
+
+# Drop rows with unknown values
+dataset = dataset.dropna()
+
+# Convert from numeric to categorical
+dataset['Origin'] = dataset['Origin'].map(
+    {1: 'USA', 2: 'Europe', 3: 'Japan'})
+dataset = pd.get_dummies(dataset, columns=['Origin'])
+
+train_dataset = dataset.sample(frac=0.8, random_state=0)
+test_dataset = dataset.drop(train_dataset.index)
+
+# Separate label from features
+train_features = train_dataset.copy()
+test_features = test_dataset.copy()
+train_labels = train_features.pop('MPG')
+test_labels = test_features.pop('MPG')
+
+normalizer = layers.Normalization(axis=-1)
+normalizer.adapt(np.array(train_features))
+
+model = Sequential([
+    normalizer,
+    layers.Dense(64, activation='relu'),
+    layers.Dense(64, activation='relu'),
+    layers.Dense(1)])
+
+model.compile(
+    optimizer=optimizers.Adam(),
+    loss='mean_absolute_error')
+
+model.fit(
+    train_features,
+    train_labels,
+    validation_split=0.2,
+    epochs=100)
+
+model.evaluate(test_features, test_labels)
+
+prediction = model.predict(test_features)
+
+print('Prediction: ', prediction[0])
+print('Label: ', test_labels.iloc[0])
