@@ -1,121 +1,72 @@
-from typing import cast
+import tensorflow as tf
 from tensorflow import data
-from tensorflow.python.keras import Sequential, regularizers
-from tensorflow.python.keras.layers import Dense, Dropout
-import tensorflow_datasets as tfds
+from utils import (
+    utils, optimizers, callbacks, metrics, losses,
+    Sequential, layers)
+import pandas as pd
 import numpy as np
 
-WORD_COUNT = 10000
-PAD_VALUE = 0
-SEQUENCE_MAXLEN = 256
+Load_Response = tuple[data.Dataset, data.Dataset, data.Dataset]
 
-(train_data, train_labels), (test_data, test_labels) = (
-    tfds.load(
-        'imdb_reviews',
-        split=['train', 'test'],
-        as_supervised=True)
+FEATURES = 28
+N_ROWS = 100000
+N_VALIDATION = int(1e3)
+N_TRAIN = int(1e4)
+BUFFER_SIZE = int(1e4)
+BATCH_SIZE = 500
+STEPS_PER_EPOCH = 160
+
+# gz = utils.get_file(
+#     'HIGGS.csv.gz',
+#     'http://mlphysics.ics.uci.edu/data/higgs/HIGGS.csv.gz')
+
+data_train = pd.read_csv(
+   '~/.keras/datasets/HIGGS.csv',
+   names=['class_label', 'jet_1_b-tag', 'jet_1_eta', 'jet_1_phi', 'jet_1_pt', 'jet_2_b-tag', 'jet_2_eta', 'jet_2_phi', 'jet_2_pt', 'jet_3_b-tag', 'jet_3_eta', 'jet_3_phi', 'jet_3_pt', 'jet_4_b-tag', 'jet_4_eta', 'jet_4_phi', 'jet_4_pt', 'lepton_eta', 'lepton_pT', 'lepton_phi', 'm_bb', 'm_jj', 'm_jjj', 'm_jlv', 'm_lv', 'm_wbb', 'm_wwbb', 'missing_energy_magnitude', 'missing_energy_phi'],
+   nrows=N_ROWS
 )
 
-train_data = cast(data.Dataset, train_data)
-train_labels = cast(data.Dataset, train_labels)
-test_data = cast(data.Dataset, test_data)
-test_labels = cast(data.Dataset, test_labels)
+data_labels = data_train.pop('class_label')
 
-def convert_to_hot_encoding(sequences, dimension):
-    hot_encoded_sequences = np.zeros((len(sequences), dimension))
+lr_schedule = optimizers.schedules.InverseTimeDecay(
+  0.001,
+  decay_steps=STEPS_PER_EPOCH * 10,
+  decay_rate=1,
+  staircase=False)
 
-    for i, word_indices in enumerate(sequences):
-        hot_encoded_sequences[i, word_indices] = 1.0
+normalizer = layers.Normalization(axis=-1)
+normalizer.adapt(np.array(data_train))
 
-    return hot_encoded_sequences
+def compile_and_fit(model, optimizer=None, max_epochs=100):
+    if optimizer is None:
+        optimizer = optimizers.Adam(lr_schedule)
 
-train_data = convert_to_hot_encoding(train_data, dimension=WORD_COUNT)
-test_data = convert_to_hot_encoding(test_data, dimension=WORD_COUNT)
+    model.compile(
+        optimizer=optimizer,
+        loss=losses.BinaryCrossentropy(from_logits=True),
+        metrics=[
+            metrics.BinaryCrossentropy(
+                from_logits=True, name='binary_crossentropy'),
+            'accuracy'])
 
-validation_train_data = train_data[:10000]
-partial_train_data = train_data[10000:]
-validation_train_labels = train_labels[:10000]
-partial_train_labels = train_labels[10000:]
+    model.summary()
 
-overfitted_model = Sequential([
-    Dense(512, activation='relu', input_shape=(WORD_COUNT,)),
-    Dense(512, activation='relu'),
-    Dense(1, activation='sigmoid')
-])
+    history = model.fit(
+        data_train,
+        data_labels,
+        epochs=max_epochs,
+        batch_size=BATCH_SIZE,
+        validation_split=0.2,
+        callbacks=callbacks.EarlyStopping(
+            monitor='val_binary_crossentropy', patience=200),
+        verbose=1
+        )
 
-overfitted_model.compile(
-    optimizer='adam',
-    loss='binary_crossentropy',
-    metrics=['accuracy', 'binary_crossentropy']
-)
+    return history
 
-overfitted_model.summary()
+tiny_model = Sequential([
+    normalizer,
+    layers.Dense(16, activation='elu'),
+    layers.Dense(1)])
 
-overfitted_model.fit(
-    train_data,
-    train_labels,
-    epochs=20,
-    batch_size=512,
-    validation_data=(test_data, test_labels),
-    verbose=2
-)
-
-regularized_model = Sequential([
-    Dense(
-        16,
-        kernel_regularizer=regularizers.l2(0.001),
-        activation='relu',
-        input_shape=(WORD_COUNT,)
-    ),
-    Dense(
-        16,
-        kernel_regularizer=regularizers.l2(0.001),
-        activation='relu'
-    ),
-    Dense(1, activation='sigmoid')
-])
-
-regularized_model.compile(
-    optimizer='adam',
-    loss='binary_crossentropy',
-    metrics=['accuracy', 'binary_crossentropy']
-)
-
-regularized_model.summary()
-
-regularized_model.fit(
-    partial_train_data,
-    partial_train_labels,
-    epochs=20,
-    batch_size=512,
-    validation_data=(validation_train_data, validation_train_labels),
-    verbose=2
-)
-
-droppedout_model = Sequential([
-    Dense(16, activation='relu', input_shape=(WORD_COUNT,)),
-    Dropout(0.5),
-    Dense(16, activation='relu'),
-    Dropout(0.5),
-    Dense(1, activation='sigmoid')
-])
-
-droppedout_model.compile(
-    optimizer='adam',
-    loss='binary_crossentropy',
-    metrics=['accuracy', 'binary_crossentropy']
-)
-
-droppedout_model.summary()
-
-droppedout_model.fit(
-    partial_train_data,
-    partial_train_labels,
-    epochs=20,
-    batch_size=512,
-    validation_data=(validation_train_data, validation_train_labels),
-    verbose=2
-)
-
-regularized_model.evaluate(test_data, test_labels)
-droppedout_model.evaluate(test_data, test_labels)
+compile_and_fit(tiny_model)
