@@ -5,7 +5,8 @@ import keras
 # Fix autocomplete issue
 tf_keras = cast(keras, tf.keras)
 (Sequential, layers, losses, metrics,
-activations, optimizers, utils, callbacks) = (
+activations, optimizers, utils, callbacks,
+regularizers) = (
     tf_keras.Sequential,
     tf_keras.layers,
     tf_keras.losses,
@@ -13,4 +14,5 @@ activations, optimizers, utils, callbacks) = (
     tf_keras.activations,
     tf_keras.optimizers,
     tf_keras.utils,
-    tf_keras.callbacks)
+    tf_keras.callbacks,
+    tf_keras.regularizers)

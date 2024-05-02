@@ -1,10 +1,8 @@
 from utils import (
     optimizers, callbacks, metrics, losses,
-    Sequential, layers)
+    Sequential, layers, regularizers, utils)
 import pandas as pd
-import numpy as np
 
-SEQUENTIAL = Sequential
 FEATURES = 28
 N_ROWS = 100000
 N_VALIDATION = 0.2
@@ -18,56 +16,69 @@ COLUMN_NAMES = ['class_label', 'jet_1_b-tag', 'jet_1_eta', 'jet_1_phi',
     'lepton_phi', 'm_bb', 'm_jj', 'm_jjj', 'm_jlv', 'm_lv', 'm_wbb',
     'm_wwbb', 'missing_energy_magnitude', 'missing_energy_phi']
 
-# gz = utils.get_file(
-#     'HIGGS.csv.gz',
-#     'http://mlphysics.ics.uci.edu/data/higgs/HIGGS.csv.gz')
+utils.get_file(
+    'HIGGS.csv.gz',
+    'http://mlphysics.ics.uci.edu/data/higgs/HIGGS.csv.gz')
 
 data_train = pd.read_csv(
-   '~/.keras/datasets/HIGGS.csv',
-   names=COLUMN_NAMES,
-   nrows=N_ROWS)
+    '~/.keras/datasets/HIGGS.csv',
+    names=COLUMN_NAMES,
+    nrows=N_ROWS)
 
 data_labels = data_train.pop(COLUMN_NAMES[0])
 
+# Gradually reduce the learning rate during training
 lr_schedule = optimizers.schedules.InverseTimeDecay(
     0.001,
     decay_steps=STEPS_PER_EPOCH * 10,
     decay_rate=1,
     staircase=False)
 
-normalizer = layers.Normalization(axis=-1)
-normalizer.adapt(np.array(data_train))
+'''
+Weight regularization puts constraints on the complexity of
+a network by forcing its weights only to take small values,
+which makes the distribution of weight values more "regular".
 
-def compile_and_fit(
-    model: SEQUENTIAL,
+Dropout consists of randomly "dropping out" (i.e. set to zero)
+a number of output features of the layer during training.
+'''
+model = Sequential([
+    layers.Input((FEATURES,)),
+    layers.Dense(
+        512, activation='elu',
+        kernel_regularizer=regularizers.l2(0.0001)),
+    layers.Dropout(0.5),
+    layers.Dense(
+        512, activation='elu',
+        kernel_regularizer=regularizers.l2(0.0001)),
+    layers.Dropout(0.5),
+    layers.Dense(
+        512, activation='elu',
+        kernel_regularizer=regularizers.l2(0.0001)),
+    layers.Dropout(0.5),
+    layers.Dense(
+        512, activation='elu',
+        kernel_regularizer=regularizers.l2(0.0001)),
+    layers.Dropout(0.5),
+    layers.Dense(1)
+])
+
+model.compile(
     optimizer=optimizers.Adam(lr_schedule),
-    max_epochs=MAX_EPOCHS
-):
-    model.compile(
-        optimizer=optimizer,
-        loss=losses.BinaryCrossentropy(from_logits=True),
-        metrics=[
-            metrics.BinaryCrossentropy(
-                from_logits=True, name='binary_crossentropy'),
-            'accuracy'])
+    loss=losses.BinaryCrossentropy(from_logits=True),
+    metrics=[
+        metrics.BinaryCrossentropy(
+            from_logits=True, name='binary_crossentropy'),
+        'accuracy'])
 
-    model.summary()
+model.summary()
 
-    history = model.fit(
-        data_train,
-        data_labels,
-        epochs=max_epochs,
-        batch_size=BATCH_SIZE,
-        validation_split=N_VALIDATION,
-        callbacks=callbacks.EarlyStopping(
-            monitor='val_binary_crossentropy', patience=200),
-        verbose=1)
-
-    return history
-
-tiny_model = Sequential([
-    normalizer,
-    layers.Dense(16, activation='elu'),
-    layers.Dense(1)])
-
-compile_and_fit(tiny_model)
+model.fit(
+    data_train,
+    data_labels,
+    epochs=MAX_EPOCHS,
+    batch_size=BATCH_SIZE,
+    validation_split=N_VALIDATION,
+    callbacks=callbacks.EarlyStopping(
+        monitor='val_binary_crossentropy', patience=200),
+    verbose=1)
