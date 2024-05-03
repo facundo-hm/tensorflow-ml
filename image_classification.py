@@ -1,9 +1,10 @@
 from typing import cast
 import tensorflow as tf
 import tensorflow_datasets as tfds
+import keras_tuner as kt
 import numpy as np
 from utils import (
-    Sequential, layers, losses, optimizers, metrics)
+    Sequential, layers, losses, optimizers, callbacks)
 
 MAX_VALUE = 255.0
 LABEL_NAMES = [
@@ -33,26 +34,71 @@ validation_data = validation_data.map(
 test_data = test_data.map(
     normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
 
-model = Sequential([
-    layers.Flatten(input_shape=(28, 28)),
-    layers.Dense(128, activation='relu'),
-    layers.Dense(10)])
+def hypermodel_builder(hp):
+    # Tune the number of units in the first Dense layer
+    hp_units = hp.Int('units', min_value=32, max_value=512, step=32)
 
-model.summary()
+    model = Sequential([
+        layers.Flatten(input_shape=(28, 28)),
+        layers.Dense(units=hp_units, activation='relu'),
+        layers.Dense(10)
+    ])
 
-model.compile(
-    optimizer=optimizers.Adam(0.001),
-    loss=losses.SparseCategoricalCrossentropy(from_logits=True),
-    metrics=[metrics.SparseCategoricalAccuracy()])
+    # Tune the learning rate for the optimizer
+    hp_learning_rate = hp.Choice(
+        'learning_rate', values=[1e-2, 1e-3, 1e-4])
 
-model.fit(train_data, validation_data=validation_data, epochs=10)
+    model.compile(
+        optimizer=optimizers.Adam(learning_rate=hp_learning_rate),
+        loss=losses.SparseCategoricalCrossentropy(from_logits=True),
+        metrics=['accuracy'])
 
-model.evaluate(test_data, verbose=2)
+    return model
+
+tuner = kt.Hyperband(
+    hypermodel_builder,
+    objective='val_accuracy',
+    max_epochs=10,
+    factor=3,
+    project_name='tuner_files')
+
+tuner.search(
+    train_data,
+    validation_data=validation_data,
+    epochs=50,
+    callbacks=[
+        callbacks.EarlyStopping(monitor='val_loss', patience=5)]
+)
+
+best_hps = tuner.get_best_hyperparameters()[0]
+base_model = tuner.hypermodel.build(best_hps)
+
+history = base_model.fit(
+    train_data,
+    validation_data=validation_data,
+    epochs=50)
+
+# Find the optimal number of epochs
+val_acc_per_epoch = history.history['val_accuracy']
+best_epoch = val_acc_per_epoch.index(max(val_acc_per_epoch)) + 1
+
+print('Best epoch: ', best_epoch)
+
+model = tuner.hypermodel.build(best_hps)
+
+# Retrain model with hyperparameters and optimal epochs
+model.fit(
+    train_data,
+    validation_data=validation_data,
+    epochs=best_epoch)
+
+evaluation = model.evaluate(test_data)
+print("[test loss, test accuracy]:", evaluation)
 
 # Attach a softmax layer to convert the model's
 # linear outputs—logits—to probabilities
 probability_model = Sequential([
-    model, 
+    model,
     layers.Softmax()
 ])
 

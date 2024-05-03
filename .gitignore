@@ -108,3 +108,6 @@ venv.bak/
 
 # saved models
 models/
+
+# Keras Tuner
+tuner_files/
