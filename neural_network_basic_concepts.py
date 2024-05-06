@@ -1,6 +1,7 @@
 from typing import cast
 import tensorflow as tf
-from utils import Sequential, layers, activations, optimizers, losses
+from utils import (
+   Sequential, layers, activations, optimizers, losses, metrics)
 import tensorflow_datasets as tfds
 from tensorflow_datasets.core import DatasetInfo
 
@@ -36,13 +37,22 @@ model = Sequential([
     layers.Dense(10, activation=activations.relu),
     layers.Dense(3)])
 
-model.summary()
+NUM_EPOCHS = 100
 
-model.compile(
-    optimizer=optimizer,
-    loss=losses.SparseCategoricalCrossentropy(from_logits=True),
-    metrics=['accuracy'])
+for epoch in range(1, NUM_EPOCHS + 1):
+    epoch_loss_avg = metrics.Mean()
+    epoch_accuracy = metrics.SparseCategoricalAccuracy()
 
-model.fit(ds_train, epochs=100)
+    for x, y in ds_train:
+        # Optimize the model
+        loss_value, grads = grad(model, x, y)
+        optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
-model.evaluate(ds_test)
+        # Add current batch loss
+        epoch_loss_avg.update_state(loss_value)
+        # Compare predicted label to actual label
+        epoch_accuracy.update_state(y, model(x, training=True))
+
+    if epoch % 10 == 0:
+        print('\nEpoch {:03d}: Loss: {:.3f}, Accuracy: {:.3%}\n'.format(
+            epoch, epoch_loss_avg.result(), epoch_accuracy.result()))
