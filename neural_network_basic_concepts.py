@@ -1,7 +1,7 @@
 from typing import cast
 import tensorflow as tf
 from utils import (
-   Sequential, layers, activations, optimizers, losses, metrics)
+   Sequential, layers, activations, optimizers, losses, metrics, Model)
 import tensorflow_datasets as tfds
 from tensorflow_datasets.core import DatasetInfo
 import numpy as np
@@ -9,7 +9,7 @@ import numpy as np
 SequentialType = Sequential
 Dataset = tf.data.Dataset
 
-NUM_EPOCHS = 10
+NUM_EPOCHS = 50
 BATCH_SIZE = 32
 CLASS_NAMES = ['Adélie', 'Chinstrap', 'Gentoo']
 
@@ -39,11 +39,36 @@ def grad(model: SequentialType, X: Dataset, y: Dataset):
     return loss_value, tape.gradient(
         loss_value, model.trainable_variables)
 
-model = Sequential([
-    layers.Input(shape=(4,)),
-    layers.Dense(10, activation=activations.relu),
-    layers.Dense(10, activation=activations.relu),
-    layers.Dense(3)])
+class DenseLayer(layers.Layer):
+    def __init__(self, num_outputs):
+        super(DenseLayer, self).__init__()
+        self.num_outputs = num_outputs
+
+    def build(self, input_shape):
+        # Add one weight per neuron
+        self.kernel = self.add_weight(
+            shape=(int(input_shape[-1]), self.num_outputs))
+
+    def call(self, inputs):
+        return tf.matmul(inputs, self.kernel)
+
+class CustomModel(Model):
+    def __init__(self):
+        super(CustomModel, self).__init__(name='')
+        self.denselayer_1 = DenseLayer(4)
+        self.denselayer_2 = DenseLayer(10)
+        self.denselayer_3 = DenseLayer(3)
+
+    def call(self, input_tensor):
+        x = self.denselayer_1(input_tensor)
+        x = activations.relu(x)
+        x = self.denselayer_2(x)
+        x = activations.relu(x)
+
+        return self.denselayer_3(x)
+
+model = CustomModel()
+model.summary()
 
 for epoch in range(1, NUM_EPOCHS + 1):
     epoch_loss_avg = metrics.Mean()
@@ -68,7 +93,6 @@ test_accuracy = metrics.Accuracy()
 # Evaluate the model
 for X, y in ds_test:
     logits = model(X, training=False)
-    print(logits)
     prediction = np.argmax(logits, axis=1)
     test_accuracy(prediction, y)
 
