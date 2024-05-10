@@ -9,7 +9,7 @@ import numpy as np
 SequentialType = Sequential
 Dataset = tf.data.Dataset
 
-NUM_EPOCHS = 50
+NUM_EPOCHS = 5
 BATCH_SIZE = 32
 CLASS_NAMES = ['Adélie', 'Chinstrap', 'Gentoo']
 
@@ -36,8 +36,11 @@ def grad(model: SequentialType, X: Dataset, y: Dataset):
     with tf.GradientTape() as tape:
         loss_value = loss(model, X, y)
 
-    return loss_value, tape.gradient(
-        loss_value, model.trainable_variables)
+    # Compute gradients of loss_values with respect
+    # to trainable_variables 
+    loss_grad = tape.gradient(loss_value, model.trainable_variables)
+
+    return loss_value, loss_grad
 
 class DenseLayer(layers.Layer):
     def __init__(self, num_outputs):
