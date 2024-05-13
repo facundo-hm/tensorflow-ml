@@ -43,17 +43,20 @@ def grad(model: SequentialType, X: Dataset, y: Dataset):
     return loss_value, loss_grad
 
 class DenseLayer(layers.Layer):
-    def __init__(self, num_outputs):
-        super(DenseLayer, self).__init__()
-        self.num_outputs = num_outputs
+    def __init__(self, units, **kwargs):
+        super().__init__(**kwargs)
+        self.units = units
+        self.activation = tf.matmul
 
     def build(self, input_shape):
         # Add one weight per neuron
         self.kernel = self.add_weight(
-            shape=(int(input_shape[-1]), self.num_outputs))
+            name='karnel', shape=(int(input_shape[-1]), self.units))
+        self.bias = self.add_weight(
+            name='bias', shape=[self.units], initializer='zeros')
 
     def call(self, inputs):
-        return tf.matmul(inputs, self.kernel)
+        return self.activation(inputs, self.kernel) + self.bias
 
 class CustomModel(Model):
     def __init__(self):
