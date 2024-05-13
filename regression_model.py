@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from utils import Sequential, layers, optimizers
+from utils import Sequential, layers, optimizers, activations, losses, metrics
 
 URL = (
     'http://archive.ics.uci.edu/ml/machine-learning-databases/'
@@ -39,13 +39,16 @@ normalizer.adapt(np.array(train_features))
 
 model = Sequential([
     normalizer,
-    layers.Dense(64, activation='relu'),
-    layers.Dense(64, activation='relu'),
+    layers.Dense(
+        64, activation=activations.relu, kernel_initializer='he_normal'),
+    layers.Dense(
+        64, activation=activations.relu, kernel_initializer='he_normal'),
     layers.Dense(1)])
 
 model.compile(
     optimizer=optimizers.Adam(),
-    loss='mean_absolute_error')
+    loss=losses.mean_squared_error,
+    metrics=[metrics.mean_squared_error])
 
 model.fit(
     train_features,
