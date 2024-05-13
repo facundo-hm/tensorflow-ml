@@ -51,7 +51,9 @@ class DenseLayer(layers.Layer):
     def build(self, input_shape):
         # Add one weight per neuron
         self.kernel = self.add_weight(
-            name='karnel', shape=(int(input_shape[-1]), self.units))
+            name='karnel',
+            shape=(int(input_shape[-1]), self.units),
+            initializer='glorot_normal')
         self.bias = self.add_weight(
             name='bias', shape=[self.units], initializer='zeros')
 
