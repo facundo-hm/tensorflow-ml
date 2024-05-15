@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
-from utils import Sequential, layers, optimizers, activations, losses, metrics
+from utils import (
+    Sequential, layers, optimizers, activations,
+    losses, metrics, constraints)
 
 URL = (
     'http://archive.ics.uci.edu/ml/machine-learning-databases/'
@@ -37,12 +39,17 @@ test_labels = test_features.pop('MPG')
 normalizer = layers.Normalization(axis=-1)
 normalizer.adapt(np.array(train_features))
 
+def create_hidden_layer(units: int):
+    return layers.Dense(
+        units,
+        activation=activations.relu,
+        kernel_initializer='he_normal',
+        kernel_constraint=constraints.max_norm(1.))
+
 model = Sequential([
     normalizer,
-    layers.Dense(
-        64, activation=activations.relu, kernel_initializer='he_normal'),
-    layers.Dense(
-        64, activation=activations.relu, kernel_initializer='he_normal'),
+    create_hidden_layer(64),
+    create_hidden_layer(64),
     layers.Dense(1)])
 
 model.compile(

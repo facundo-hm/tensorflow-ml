@@ -6,7 +6,7 @@ import keras
 tf_keras = cast(keras, tf.keras)
 (Sequential, layers, losses, metrics,
 activations, optimizers, utils, callbacks,
-regularizers, Model) = (
+regularizers, Model, constraints) = (
     tf_keras.Sequential,
     tf_keras.layers,
     tf_keras.losses,
@@ -16,4 +16,5 @@ regularizers, Model) = (
     tf_keras.utils,
     tf_keras.callbacks,
     tf_keras.regularizers,
-    tf_keras.Model)
+    tf_keras.Model,
+    tf_keras.constraints)
