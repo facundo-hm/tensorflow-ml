@@ -9,7 +9,7 @@ import numpy as np
 SequentialType = Sequential
 Dataset = tf.data.Dataset
 
-NUM_EPOCHS = 20
+NUM_EPOCHS = 10
 BATCH_SIZE = 32
 CLASS_NAMES = ['Adélie', 'Chinstrap', 'Gentoo']
 
@@ -24,24 +24,6 @@ Load_Response = tuple[
         batch_size=BATCH_SIZE,
         as_supervised=True,
         with_info=True))
-
-loss_object = losses.SparseCategoricalCrossentropy(from_logits=True)
-optimizer = optimizers.SGD(
-    learning_rate=0.001, momentum=0.9, nesterov=True)
-
-def loss(model: SequentialType, X: Dataset, y: Dataset, training=True):
-    y_ = model(X, training=training)
-    return loss_object(y_true=y, y_pred=y_)
-
-def grad(model: SequentialType, X: Dataset, y: Dataset):
-    with tf.GradientTape() as tape:
-        loss_value = loss(model, X, y)
-
-    # Compute gradients of loss_values with respect
-    # to trainable_variables 
-    loss_grad = tape.gradient(loss_value, model.trainable_variables)
-
-    return loss_value, loss_grad
 
 class DenseLayer(layers.Layer):
     def __init__(self, units, **kwargs):
@@ -62,22 +44,34 @@ class DenseLayer(layers.Layer):
         return self.activation(inputs, self.kernel) + self.bias
 
 class CustomModel(Model):
-    def __init__(self):
-        super(CustomModel, self).__init__(name='')
-        self.denselayer_1 = DenseLayer(4)
-        self.denselayer_2 = DenseLayer(10)
-        self.denselayer_3 = DenseLayer(3)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.hidden_1 = DenseLayer(4)
+        self.hidden_2 = DenseLayer(10)
+        self.out = DenseLayer(3)
 
     def call(self, input_tensor):
-        x = self.denselayer_1(input_tensor)
-        x = activations.relu(x)
-        x = self.denselayer_2(x)
-        x = activations.relu(x)
-
-        return self.denselayer_3(x)
+        x = self.hidden_1(input_tensor)
+        x = self.hidden_2(x)
+        return self.out(x)
 
 model = CustomModel()
 model.summary()
+
+loss_object = losses.SparseCategoricalCrossentropy(from_logits=True)
+optimizer = optimizers.SGD(
+    learning_rate=0.001, momentum=0.9, nesterov=True)
+
+def grad(model: SequentialType, X: Dataset, y: Dataset, training=True):
+    with tf.GradientTape() as tape:
+        y_ = model(X, training=training)
+        loss_value = loss_object(y_true=y, y_pred=y_)
+
+    # Compute gradients of loss_values with respect
+    # to trainable_variables 
+    loss_grad = tape.gradient(loss_value, model.trainable_variables)
+
+    return loss_value, loss_grad, y_
 
 for epoch in range(1, NUM_EPOCHS + 1):
     epoch_loss_avg = metrics.Mean()
@@ -85,13 +79,13 @@ for epoch in range(1, NUM_EPOCHS + 1):
 
     for X, y in ds_train:
         # Optimize the model
-        loss_value, grads = grad(model, X, y)
+        loss_value, grads, y_ = grad(model, X, y)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
         # Add current batch loss
         epoch_loss_avg.update_state(loss_value)
         # Compare predicted label to actual label
-        epoch_accuracy.update_state(y, model(X, training=True))
+        epoch_accuracy.update_state(y, y_)
 
     if epoch % 10 == 0:
         print('\nEpoch {:03d}: Loss: {:.3f}, Accuracy: {:.3%}\n'.format(
