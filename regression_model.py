@@ -53,7 +53,7 @@ model = Sequential([
     layers.Dense(1)])
 
 model.compile(
-    optimizer=optimizers.Adam(),
+    optimizer=optimizers.AdamW(),
     loss=losses.mean_squared_error,
     metrics=[metrics.mean_squared_error])
 

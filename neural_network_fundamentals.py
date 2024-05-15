@@ -9,7 +9,7 @@ import numpy as np
 SequentialType = Sequential
 Dataset = tf.data.Dataset
 
-NUM_EPOCHS = 5
+NUM_EPOCHS = 20
 BATCH_SIZE = 32
 CLASS_NAMES = ['Adélie', 'Chinstrap', 'Gentoo']
 
@@ -26,7 +26,8 @@ Load_Response = tuple[
         with_info=True))
 
 loss_object = losses.SparseCategoricalCrossentropy(from_logits=True)
-optimizer = optimizers.Adam()
+optimizer = optimizers.SGD(
+    learning_rate=0.001, momentum=0.9, nesterov=True)
 
 def loss(model: SequentialType, X: Dataset, y: Dataset, training=True):
     y_ = model(X, training=training)
