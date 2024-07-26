@@ -7,20 +7,17 @@ from utils import (
     Sequential, layers, losses, optimizers, callbacks)
 
 MAX_VALUE = 255.0
-LABEL_NAMES = [
-    'T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal',
-    'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+LABEL_NAMES = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress',
+    'Coat', 'Sandal','Shirt', 'Sneaker', 'Bag', 'Ankle boot']
 
 Load_Response = tuple[
     tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]
 
 train_data, validation_data, test_data = cast(
-  Load_Response,
-  tfds.load(
-        'fashion_mnist',
-        split=('train[:80%]', 'train[80%:]', 'test'),
-        batch_size=128,
-        as_supervised=True))
+    Load_Response,
+    tfds.load(
+        'fashion_mnist', split=('train[:80%]', 'train[80%:]', 'test'),
+        batch_size=128, as_supervised=True))
 
 def normalize_img(image, label):
     # x and y must have the same dtype.
@@ -56,27 +53,20 @@ def hypermodel_builder(hp):
     return model
 
 tuner = kt.Hyperband(
-    hypermodel_builder,
-    objective='val_accuracy',
-    max_epochs=10,
-    factor=3,
-    project_name='tuner_files')
+    hypermodel_builder, objective='val_accuracy', max_epochs=10,
+    factor=3, project_name='tuner_files')
 
 tuner.search(
-    train_data,
-    validation_data=validation_data,
-    epochs=50,
-    callbacks=[
-        callbacks.EarlyStopping(monitor='val_loss', patience=5)]
+    train_data, validation_data=validation_data, epochs=50,
+    callbacks=[callbacks.EarlyStopping(
+        monitor='val_loss', patience=5)]
 )
 
 best_hps = tuner.get_best_hyperparameters()[0]
 base_model = tuner.hypermodel.build(best_hps)
 
 history = base_model.fit(
-    train_data,
-    validation_data=validation_data,
-    epochs=50)
+    train_data, validation_data=validation_data, epochs=50)
 
 # Find the optimal number of epochs
 val_acc_per_epoch = history.history['val_accuracy']
@@ -88,19 +78,14 @@ model = tuner.hypermodel.build(best_hps)
 
 # Retrain model with hyperparameters and optimal epochs
 model.fit(
-    train_data,
-    validation_data=validation_data,
-    epochs=best_epoch)
+    train_data, validation_data=validation_data, epochs=best_epoch)
 
 evaluation = model.evaluate(test_data)
 print("[test loss, test accuracy]:", evaluation)
 
 # Attach a softmax layer to convert the model's
 # linear outputs—logits—to probabilities
-probability_model = Sequential([
-    model,
-    layers.Softmax()
-])
+probability_model = Sequential([model, layers.Softmax()])
 
 # Remove labels
 X_test = test_data.map(lambda x, y: x)

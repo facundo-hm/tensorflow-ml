@@ -4,20 +4,14 @@ from utils import (
     Sequential, layers, optimizers, activations,
     losses, metrics, constraints)
 
-URL = (
-    'http://archive.ics.uci.edu/ml/machine-learning-databases/'
+URL = ('http://archive.ics.uci.edu/ml/machine-learning-databases/'
     'auto-mpg/auto-mpg.data')
-COLUMN_NAMES = [
-    'MPG', 'Cylinders', 'Displacement', 'Horsepower',
+COLUMN_NAMES = ['MPG', 'Cylinders', 'Displacement', 'Horsepower',
     'Weight', 'Acceleration', 'Model Year', 'Origin']
 
 dataset = pd.read_csv(
-    URL,
-    names=COLUMN_NAMES,
-    na_values='?',
-    comment='\t',
-    sep=' ',
-    skipinitialspace=True)
+    URL, names=COLUMN_NAMES, na_values='?', comment='\t',
+    sep=' ', skipinitialspace=True)
 
 # Drop rows with unknown values
 dataset = dataset.dropna()
@@ -41,16 +35,13 @@ normalizer.adapt(np.array(train_features))
 
 def create_hidden_layer(units: int):
     return layers.Dense(
-        units,
-        activation=activations.relu,
+        units, activation=activations.relu,
         kernel_initializer='he_normal',
         kernel_constraint=constraints.max_norm(1.))
 
 model = Sequential([
-    normalizer,
-    create_hidden_layer(64),
-    create_hidden_layer(64),
-    layers.Dense(1)])
+    normalizer, create_hidden_layer(64),
+    create_hidden_layer(64), layers.Dense(1)])
 
 model.compile(
     optimizer=optimizers.AdamW(),
@@ -58,10 +49,8 @@ model.compile(
     metrics=[metrics.mean_squared_error])
 
 model.fit(
-    train_features,
-    train_labels,
-    validation_split=0.2,
-    epochs=100)
+    train_features, train_labels,
+    validation_split=0.2, epochs=100)
 
 model.evaluate(test_features, test_labels)
 
