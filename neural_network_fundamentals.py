@@ -1,7 +1,7 @@
 from typing import cast
 import tensorflow as tf
 from utils import (
-   Sequential, layers, activations, optimizers, losses, metrics, Model)
+   Sequential, layers, optimizers, losses, metrics, Model)
 import tensorflow_datasets as tfds
 from tensorflow_datasets.core import DatasetInfo
 import numpy as np
