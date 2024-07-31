@@ -44,9 +44,13 @@ def hypermodel_builder(hp):
     # Tune the learning rate for the optimizer
     hp_learning_rate = hp.Choice(
         'learning_rate', values=[1e-2, 1e-3, 1e-4])
+    
+    optimizer = hp.Choice('optimizer', values=['sgd', 'adam'])
+    optimizer = (
+        optimizers.SGD if optimizer == 'sgd' else optimizers.Adam)
 
     model.compile(
-        optimizer=optimizers.Adam(learning_rate=hp_learning_rate),
+        optimizer=optimizer(learning_rate=hp_learning_rate),
         loss=losses.SparseCategoricalCrossentropy(from_logits=True),
         metrics=['accuracy'])
 
