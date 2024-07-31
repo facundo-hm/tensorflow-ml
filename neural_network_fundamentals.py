@@ -19,11 +19,8 @@ Load_Response = tuple[
 (ds_train, ds_test), info = cast(
     Load_Response,
     tfds.load(
-        'penguins/processed',
-        split=['train[:80%]', 'train[80%:]'],
-        batch_size=BATCH_SIZE,
-        as_supervised=True,
-        with_info=True))
+        'penguins/processed', split=['train[:80%]', 'train[80%:]'],
+        batch_size=BATCH_SIZE, as_supervised=True, with_info=True))
 
 class DenseLayer(layers.Layer):
     def __init__(self, units, **kwargs):
@@ -34,8 +31,7 @@ class DenseLayer(layers.Layer):
     def build(self, input_shape):
         # Add one weight per neuron
         self.kernel = self.add_weight(
-            name='karnel',
-            shape=(int(input_shape[-1]), self.units),
+            name='karnel', shape=(int(input_shape[-1]), self.units),
             initializer='glorot_normal')
         self.bias = self.add_weight(
             name='bias', shape=[self.units], initializer='zeros')
