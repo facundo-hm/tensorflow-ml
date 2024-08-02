@@ -4,7 +4,7 @@ import tensorflow_datasets as tfds
 import keras_tuner as kt
 import numpy as np
 from utils import (
-    Sequential, layers, losses, optimizers, callbacks)
+    Sequential, layers, losses, optimizers, callbacks, activations)
 
 MAX_VALUE = 255.0
 LABEL_NAMES = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress',
@@ -16,20 +16,21 @@ Load_Response = tuple[
 train_data, validation_data, test_data = cast(
     Load_Response,
     tfds.load(
-        'fashion_mnist', split=('train[:80%]', 'train[80%:]', 'test'),
+        'fashion_mnist',
+        split=('train[:80%]', 'train[80%:]', 'test'),
         batch_size=128, as_supervised=True))
 
-def normalize_img(image, label):
-    # x and y must have the same dtype.
-    # Normalize images from uint8 to float32
-    return tf.cast(image, tf.float32) / MAX_VALUE, label
+# def normalize_img(image, label):
+#     # x and y must have the same dtype.
+#     # Normalize images from uint8 to float32
+#     return tf.cast(image, tf.float32) / MAX_VALUE, label
 
-train_data = train_data.map(
-    normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
-validation_data = validation_data.map(
-    normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
-test_data = test_data.map(
-    normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
+# train_data = train_data.map(
+#     normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
+# validation_data = validation_data.map(
+#     normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
+# test_data = test_data.map(
+#     normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
 
 def hypermodel_builder(hp):
     # Tune the number of units in the first Dense layer
@@ -37,7 +38,9 @@ def hypermodel_builder(hp):
 
     model = Sequential([
         layers.Flatten(input_shape=(28, 28)),
-        layers.Dense(units=hp_units, activation='relu'),
+        layers.BatchNormalization(),
+        layers.Dense(units=hp_units, activation=activations.relu),
+        layers.BatchNormalization(),
         layers.Dense(10)
     ])
 
