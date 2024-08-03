@@ -20,21 +20,14 @@ train_data, validation_data, test_data = cast(
         split=('train[:80%]', 'train[80%:]', 'test'),
         batch_size=128, as_supervised=True))
 
-# def normalize_img(image, label):
-#     # x and y must have the same dtype.
-#     # Normalize images from uint8 to float32
-#     return tf.cast(image, tf.float32) / MAX_VALUE, label
-
-# train_data = train_data.map(
-#     normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
-# validation_data = validation_data.map(
-#     normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
-# test_data = test_data.map(
-#     normalize_img, num_parallel_calls=tf.data.AUTOTUNE)
-
 def hypermodel_builder(hp):
     # Tune the number of units in the first Dense layer
     hp_units = hp.Int('units', min_value=32, max_value=512, step=32)
+        # Tune the learning rate for the optimizer
+    hp_learning_rate = hp.Choice(
+        'learning_rate', values=[1e-2, 1e-3, 1e-4])
+    optimizer = hp.Choice(
+        'optimizer', values=[optimizers.SGD, optimizers.Adam])
 
     model = Sequential([
         layers.Flatten(input_shape=(28, 28)),
@@ -43,14 +36,6 @@ def hypermodel_builder(hp):
         layers.BatchNormalization(),
         layers.Dense(10)
     ])
-
-    # Tune the learning rate for the optimizer
-    hp_learning_rate = hp.Choice(
-        'learning_rate', values=[1e-2, 1e-3, 1e-4])
-    
-    optimizer = hp.Choice('optimizer', values=['sgd', 'adam'])
-    optimizer = (
-        optimizers.SGD if optimizer == 'sgd' else optimizers.Adam)
 
     model.compile(
         optimizer=optimizer(learning_rate=hp_learning_rate),

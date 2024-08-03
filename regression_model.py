@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from utils import (
     Sequential, layers, optimizers, activations,
-    losses, metrics, constraints)
+    losses, metrics, constraints, callbacks)
 
 URL = ('http://archive.ics.uci.edu/ml/machine-learning-databases/'
     'auto-mpg/auto-mpg.data')
@@ -33,6 +33,10 @@ test_labels = test_features.pop('MPG')
 normalizer = layers.Normalization(axis=-1)
 normalizer.adapt(np.array(train_features))
 
+# Multiply the learning rate by 0.5 whenever the best validation
+# loss does not improve for five consecutive epochs.
+lr_scheduler = callbacks.ReduceLROnPlateau(factor=0.5, patience=5)
+
 def create_hidden_layer(units: int):
     return layers.Dense(
         units, activation=activations.relu,
@@ -49,8 +53,8 @@ model.compile(
     metrics=[metrics.mean_squared_error])
 
 model.fit(
-    train_features, train_labels,
-    validation_split=0.2, epochs=100)
+    train_features, train_labels, validation_split=0.2,
+    callbacks=[lr_scheduler], epochs=100)
 
 model.evaluate(test_features, test_labels)
 
