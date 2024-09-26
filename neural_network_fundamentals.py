@@ -1,7 +1,8 @@
 from typing import cast
 import tensorflow as tf
 from utils import (
-   Sequential, layers, optimizers, losses, metrics, Model)
+   Sequential, layers, optimizers, losses, metrics,
+   Model, activations)
 import tensorflow_datasets as tfds
 from tensorflow_datasets.core import DatasetInfo
 import numpy as np
@@ -23,10 +24,10 @@ Load_Response = tuple[
         batch_size=BATCH_SIZE, as_supervised=True, with_info=True))
 
 class DenseLayer(layers.Layer):
-    def __init__(self, units, **kwargs):
+    def __init__(self, units: int, activation: str=None, **kwargs):
         super().__init__(**kwargs)
         self.units = units
-        self.activation = tf.matmul
+        self.activation = activations.get(activation)
 
     def build(self, input_shape):
         # Add one weight per neuron
@@ -36,14 +37,20 @@ class DenseLayer(layers.Layer):
         self.bias = self.add_weight(
             name='bias', shape=[self.units], initializer='zeros')
 
-    def call(self, inputs):
-        return self.activation(inputs, self.kernel) + self.bias
+    def call(self, X):
+        return self.activation(X @ self.kernel + self.bias)
+    
+    def get_config(self):
+        base_config = super().get_config()
+        return {
+            **base_config, 'units': self.units,
+            'activation': activations.serialize(self.activation)}
 
 class CustomModel(Model):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.hidden_1 = DenseLayer(4)
-        self.hidden_2 = DenseLayer(10)
+        self.hidden_1 = DenseLayer(4, 'relu')
+        self.hidden_2 = DenseLayer(10, 'relu')
         self.out = DenseLayer(3)
 
     def call(self, input_tensor):
