@@ -52,11 +52,36 @@ class CustomModel(Model):
         self.hidden_1 = DenseLayer(4, 'relu')
         self.hidden_2 = DenseLayer(10, 'relu')
         self.out = DenseLayer(3)
+        # Keep track of the reconstruction error during training
+        self.reconstruction_mean = metrics.Mean(
+            name='reconstruction_error')
+        
+    def build(self, input_shape):
+        n_inputs = input_shape[-1]
+        # Reconstruct the inputs of the model
+        self.reconstruct = layers.Dense(n_inputs)
 
-    def call(self, input_tensor):
-        x = self.hidden_1(input_tensor)
-        x = self.hidden_2(x)
-        return self.out(x)
+    def call(self, X, training=False):
+        Z = self.hidden_1(X)
+        Z = self.hidden_2(Z)
+        # Produce the reconstruction
+        reconstruction = self.reconstruct(Z)
+        # Compute the reconstruction loss.
+        # Preserve as much information as possible through
+        # the hidden layers.
+        recon_loss = tf.reduce_mean(
+            tf.square(reconstruction - X))
+        # Add reconstruction loss to the model's list of losses.
+        # The hyperparameter ensures that it doesn't
+        # dominate the main loss.
+        self.add_loss(0.05 * recon_loss)
+
+        if training:
+            # Update reconstruction metric
+            result = self.reconstruction_mean(recon_loss)
+            self.add_metric(result)
+
+        return self.out(Z)
 
 model = CustomModel()
 model.summary()
