@@ -90,6 +90,7 @@ loss_object = losses.SparseCategoricalCrossentropy(from_logits=True)
 optimizer = optimizers.SGD(
     learning_rate=0.001, momentum=0.9, nesterov=True)
 
+@tf.function
 def grad(model: SequentialType, X: Dataset, y: Dataset, training=True):
     with tf.GradientTape() as tape:
         y_ = model(X, training=training)
