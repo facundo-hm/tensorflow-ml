@@ -31,22 +31,24 @@ def parse_csv_dataset(dataset: tf.data.Dataset):
 
     return new_dataset
 
-parsed_dataset = parse_csv_dataset(dataset)
-
 def add_encoded_name(
     dataset: list[tf.Tensor], car_names: list[tf.Tensor]
 ):
-    new_dataset: list[tuple]= []
+    data: list[tf.Tensor]= []
+    lables: list[tf.Tensor]= []
     car_names = tf.strings.strip(car_names)
     le = LabelEncoder()
     car_names_encoded = le.fit_transform(car_names)
 
     for i, line in enumerate(dataset):
         line[1] = tf.constant(car_names_encoded[i], dtype=tf.float32)
-        new_dataset.append((tf.stack(line[:-1]), tf.stack(line[-1:])))
+        data.append(tf.stack(line[:-1]))
+        lables.append(tf.stack(line[-1:]))
     
-    return new_dataset
+    return tf.data.Dataset.from_tensor_slices((data, lables))
 
+parsed_dataset = parse_csv_dataset(dataset)
 parsed_dataset = add_encoded_name(parsed_dataset, car_names)
+parsed_dataset = parsed_dataset.shuffle(20, seed=42)
 
 print(parsed_dataset)
