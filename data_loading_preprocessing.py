@@ -2,22 +2,18 @@ import tensorflow as tf
 from sklearn.preprocessing import LabelEncoder
 
 BASE_PATH = './datasets/car_price/'
-train_files = ['train_01.csv', 'train_02.csv', 'train_03.csv']
-valid_files = ['valid_01.csv', 'valid_02.csv', 'valid_03.csv']
-test_files = ['test_01.csv', 'test_02.csv', 'test_03.csv']
+SEED = 42
 
-train_dataset = tf.data.Dataset.list_files(
-    BASE_PATH + 'train_*.csv', seed=42)
-
-n_readers = 3
-dataset = train_dataset.interleave(
-    lambda filepath: tf.data.TextLineDataset(filepath),
-    cycle_length=n_readers)
-
-car_names: list[tf.Tensor] = []
+train_csv_dataset = tf.data.Dataset.list_files(
+    BASE_PATH + 'train_*.csv', seed=SEED)
+test_csv_dataset = tf.data.Dataset.list_files(
+    BASE_PATH + 'test_*.csv', seed=SEED)
+valid_csv_dataset = tf.data.Dataset.list_files(
+    BASE_PATH + 'valid_*.csv', seed=SEED)
 
 def parse_csv_dataset(dataset: tf.data.Dataset):
     new_dataset = []
+    car_names: list[tf.Tensor] = []
 
     for line in dataset.as_numpy_iterator():
         defs = (
@@ -29,7 +25,7 @@ def parse_csv_dataset(dataset: tf.data.Dataset):
         fields[25], fields[42] = fields[42], fields[25]
         new_dataset.append(fields[1:])
 
-    return new_dataset
+    return new_dataset, car_names
 
 def add_encoded_name(
     dataset: list[tf.Tensor], car_names: list[tf.Tensor]
@@ -47,8 +43,18 @@ def add_encoded_name(
     
     return tf.data.Dataset.from_tensor_slices((data, lables))
 
-parsed_dataset = parse_csv_dataset(dataset)
-parsed_dataset = add_encoded_name(parsed_dataset, car_names)
-parsed_dataset = parsed_dataset.shuffle(20, seed=42)
+def create_dataset(
+    dataset: tf.data.Dataset, n_readers=3, seed=SEED,
+    batch_size=32, shuffle_buffer_size=20
+):
+    dataset = dataset.interleave(
+        lambda filepath: tf.data.TextLineDataset(filepath),
+        cycle_length=n_readers)
+    dataset, car_names = parse_csv_dataset(dataset)
+    dataset = add_encoded_name(dataset, car_names)
+    dataset = dataset.shuffle(shuffle_buffer_size, seed=seed)
 
-print(parsed_dataset)
+    return dataset.batch(batch_size).prefetch(1)
+
+train_dataset = create_dataset(train_csv_dataset)
+print(train_dataset)
