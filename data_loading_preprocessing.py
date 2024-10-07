@@ -1,5 +1,8 @@
 import tensorflow as tf
 from sklearn.preprocessing import LabelEncoder
+from utils import (
+    Sequential, losses, optimizers, layers, activations, metrics)
+import numpy as np
 
 BASE_PATH = './datasets/car_price/'
 SEED = 42
@@ -38,23 +41,48 @@ def add_encoded_name(
 
     for i, line in enumerate(dataset):
         line[1] = tf.constant(car_names_encoded[i], dtype=tf.float32)
-        data.append(tf.stack(line[:-1]))
-        lables.append(tf.stack(line[-1:]))
+        data.append(line[:-1])
+        lables.append(line[-1:][0])
     
     return tf.data.Dataset.from_tensor_slices((data, lables))
 
 def create_dataset(
     dataset: tf.data.Dataset, n_readers=3, seed=SEED,
-    batch_size=32, shuffle_buffer_size=20
+    batch_size=25, shuffle_buffer_size=20
 ):
     dataset = dataset.interleave(
         lambda filepath: tf.data.TextLineDataset(filepath),
-        cycle_length=n_readers)
+        cycle_length=n_readers, num_parallel_calls=n_readers)
     dataset, car_names = parse_csv_dataset(dataset)
-    dataset = add_encoded_name(dataset, car_names)
+    dataset = add_encoded_name(dataset, car_names).cache()
     dataset = dataset.shuffle(shuffle_buffer_size, seed=seed)
 
     return dataset.batch(batch_size).prefetch(1)
 
 train_dataset = create_dataset(train_csv_dataset)
-print(train_dataset)
+valid_dataset = create_dataset(valid_csv_dataset)
+test_dataset = create_dataset(test_csv_dataset)
+
+X_train = train_dataset.map(lambda x, y: x)
+y_train = train_dataset.map(lambda x, y: y)
+
+normalizer = layers.Normalization(axis=-1)
+normalizer.adapt(X_train)
+
+model = Sequential([
+    normalizer,
+    layers.Dense(41, activation=activations.relu,
+        kernel_initializer='he_normal'),
+    layers.Dense(1)
+])
+model.compile(
+    optimizer=optimizers.AdamW(),
+    loss=losses.MeanSquaredError(),
+    metrics=[metrics.MeanSquaredError()])
+model.fit(train_dataset, validation_data=valid_dataset, epochs=200)
+model.evaluate(test_dataset)
+prediction = model.predict(X_train)
+
+print('Prediction: ', prediction[0])
+for lable in y_train.take(1):
+    print('Label: ', lable)
