@@ -1,5 +1,5 @@
 import tensorflow as tf
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 from utils import (
     Sequential, losses, optimizers, layers, activations, metrics)
 import numpy as np
@@ -57,7 +57,7 @@ def create_dataset(
     dataset = add_encoded_name(dataset, car_names).cache()
     dataset = dataset.shuffle(shuffle_buffer_size, seed=seed)
 
-    return dataset.batch(batch_size).prefetch(1)
+    return dataset.repeat(50).batch(batch_size).prefetch(1)
 
 train_dataset = create_dataset(train_csv_dataset)
 valid_dataset = create_dataset(valid_csv_dataset)
@@ -66,23 +66,24 @@ test_dataset = create_dataset(test_csv_dataset)
 X_train = train_dataset.map(lambda x, y: x)
 y_train = train_dataset.map(lambda x, y: y)
 
-normalizer = layers.Normalization(axis=-1)
+normalizer = layers.Normalization()
 normalizer.adapt(X_train)
 
 model = Sequential([
     normalizer,
     layers.Dense(41, activation=activations.relu,
         kernel_initializer='he_normal'),
+    layers.Dense(41, activation=activations.relu,
+        kernel_initializer='he_normal'),
     layers.Dense(1)
 ])
+
 model.compile(
-    optimizer=optimizers.AdamW(),
+    optimizer=optimizers.Adam(),
     loss=losses.MeanSquaredError(),
     metrics=[metrics.MeanSquaredError()])
-model.fit(train_dataset, validation_data=valid_dataset, epochs=200)
+model.fit(train_dataset, validation_data=valid_dataset, epochs=160)
 model.evaluate(test_dataset)
+
 prediction = model.predict(X_train)
 
-print('Prediction: ', prediction[0])
-for lable in y_train.take(1):
-    print('Label: ', lable)
