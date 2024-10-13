@@ -78,9 +78,6 @@ def extract_categories():
     ds = train_csv_dataset.concatenate(
         test_csv_dataset).concatenate(valid_csv_dataset)
     ds = create_dataset(ds)
-
-    # categories: list[tf.Tensor]= [
-    #     decode_line(line)[2] for line in ds.as_numpy_iterator()]
     
     data: list[tf.Tensor]= []
     categories: list[tf.Tensor]= []
@@ -95,13 +92,16 @@ def extract_categories():
         # Price column
         lables.append(fields[25])
 
-    return data, tf.strings.strip(categories), lables
+    return (
+        tf.stack(data),
+        tf.strings.strip(categories),
+        tf.stack(lables))
 
 X_num, X_cat, y = extract_categories()
 X_train_num, X_train_cat, y_train = X_num[:150], X_cat[:150], y[:150]
 X_valid_num, X_valid_cat, y_valid = X_num[150:], X_cat[150:], y[150:]
 
-print('X_train_num', len(X_train_num[0]))
+print('y_train', y_train.shape)
 
 test_car_names = np.array([
     'volkswagen dasher', 'toyota corolla tercel',
@@ -133,9 +133,10 @@ encoded_inputs = layers.concatenate([num_input, cat_embeddings])
 outputs = layers.Dense(1)(encoded_inputs)
 
 model = Model(inputs=[num_input, cat_input], outputs=[outputs])
-model.compile(loss='mse', optimizer='sgd')
+model.compile(
+    optimizer=optimizers.Adam(),
+    loss=losses.MeanSquaredError())
 
 model.fit(
-    (X_train_num, X_train_cat), y_train, epochs=5,
+    (X_train_num, X_train_cat), y_train, epochs=10,
     validation_data=((X_valid_num, X_valid_cat), y_valid))
-
