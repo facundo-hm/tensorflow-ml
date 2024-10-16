@@ -1,6 +1,8 @@
+from typing import cast
 from sklearn.datasets import load_sample_images
 import tensorflow as tf
-from utils import layers
+import tensorflow_datasets as tfds
+from utils import layers, Sequential
 
 imgs: list = load_sample_images()['images']
 imgs = layers.CenterCrop(height=70, width=120)(imgs)
@@ -42,3 +44,51 @@ print('dp_imgs', dp_imgs)
 gap_layer = layers.GlobalAvgPool2D()
 gap_imgs = gap_layer(imgs)
 print('gap_imgs', gap_imgs)
+
+def create_conv_2d_layer(**kwargs):
+    default_args = {
+        'kernel_size': 3,
+        'padding': 'same',
+        'activation': 'relu',
+        'kernel_initializer': 'he_normal'
+    }
+
+    return layers.Conv2D(**(default_args | kwargs))
+
+Load_Response = tuple[
+    tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]
+
+train_data, validation_data, test_data = cast(
+    Load_Response,
+    tfds.load(
+        'fashion_mnist',
+        split=('train[:80%]', 'train[80%:]', 'test'),
+        batch_size=128, as_supervised=True))
+
+print('train_data', train_data)
+
+# Basic CNN
+model = Sequential([
+    create_conv_2d_layer(
+        filters=64, kernel_size=7, input_shape=[28, 28, 1]),
+    layers.MaxPool2D(),
+    create_conv_2d_layer(filters=128),
+    create_conv_2d_layer(filters=128),
+    layers.MaxPool2D(),
+    create_conv_2d_layer(filters=256),
+    create_conv_2d_layer(filters=256),
+    layers.MaxPool2D(),
+    layers.Flatten(),
+    layers.Dense(
+        units=128, activation='relu', kernel_initializer='he_normal'),
+    layers.Dropout(0.5),
+    layers.Dense(
+        units=64, activation='relu', kernel_initializer='he_normal'),
+    layers.Dropout(0.5),
+    layers.Dense(units=10, activation='softmax')
+])
+model.compile(
+    loss='sparse_categorical_crossentropy',
+    optimizer='nadam', metrics=['accuracy'])
+model.fit(
+    train_data, validation_data=validation_data, epochs=10)
