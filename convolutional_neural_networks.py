@@ -65,7 +65,10 @@ train_data, validation_data, test_data = cast(
         split=('train[:80%]', 'train[80%:]', 'test'),
         batch_size=128, as_supervised=True))
 
-print('train_data', train_data)
+rescaling = layers.Rescaling(scale=1/255)
+
+X_train = train_data.map(lambda x, y: (rescaling(x), y))
+X_valid = validation_data.map(lambda x, y: (rescaling(x), y))
 
 # Basic CNN
 model = Sequential([
