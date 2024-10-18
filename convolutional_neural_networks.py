@@ -2,25 +2,26 @@ from typing import cast
 from sklearn.datasets import load_sample_images
 import tensorflow as tf
 import tensorflow_datasets as tfds
+import numpy as np
 from utils import layers, Sequential
 
 imgs: list = load_sample_images()['images']
 imgs = layers.CenterCrop(height=70, width=120)(imgs)
 imgs = layers.Rescaling(scale=1/255)(imgs)
-print('imgs', imgs.shape)
+# print('imgs', imgs.shape)
 
 # Create layer with 32 filters, each of size 7x7
 c_layer = layers.Conv2D(filters=32, kernel_size=(7, 7))
 c_imgs = c_layer(imgs)
-print('c_imgs', c_imgs.shape)
+# print('c_imgs', c_imgs.shape)
 
 mp_layer = layers.MaxPool2D(pool_size=2)
 mp_imgs = mp_layer(imgs)
-print('mp_imgs', mp_imgs)
+# print('mp_imgs', mp_imgs)
 
 ap_layer = layers.AvgPool2D(pool_size=2)
 ap_imgs = ap_layer(imgs)
-print('ap_imgs', ap_imgs)
+# print('ap_imgs', ap_imgs)
 
 class DepthPool(layers.Layer):
     def __init__(self, pool_size=3, **kwargs):
@@ -39,11 +40,11 @@ class DepthPool(layers.Layer):
 
 dp_layer = DepthPool(pool_size=3)
 dp_imgs = dp_layer(imgs)
-print('dp_imgs', dp_imgs)
+# print('dp_imgs', dp_imgs)
 
 gap_layer = layers.GlobalAvgPool2D()
 gap_imgs = gap_layer(imgs)
-print('gap_imgs', gap_imgs)
+# print('gap_imgs', gap_imgs)
 
 def create_conv_2d_layer(**kwargs):
     default_args = {
@@ -51,9 +52,9 @@ def create_conv_2d_layer(**kwargs):
         'padding': 'same',
         'activation': 'relu',
         'kernel_initializer': 'he_normal'
-    }
+    } | kwargs
 
-    return layers.Conv2D(**(default_args | kwargs))
+    return layers.Conv2D(**default_args)
 
 Load_Response = tuple[
     tf.data.Dataset, tf.data.Dataset, tf.data.Dataset]
@@ -65,10 +66,10 @@ train_data, validation_data, test_data = cast(
         split=('train[:80%]', 'train[80%:]', 'test'),
         batch_size=128, as_supervised=True))
 
-rescaling = layers.Rescaling(scale=1/255)
+rescaling = layers.Rescaling(scale=.01/255)
 
-X_train = train_data.map(lambda x, y: (rescaling(x), y))
-X_valid = validation_data.map(lambda x, y: (rescaling(x), y))
+train_data = train_data.map(lambda x, y: (rescaling(x), y))
+validation_data = validation_data.map(lambda x, y: (rescaling(x), y))
 
 # Basic CNN
 model = Sequential([
